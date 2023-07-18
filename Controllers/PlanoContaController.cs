@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using myfinance_web_dotnet.Domain;
 using myfinance_web_dotnet.Models;
 
 namespace myfinance_web_dotnet.Controllers
 {
+    [Route("[controller]")]
     public class PlanoContaController : Controller
     {
         private readonly ILogger<PlanoContaController> _logger;
@@ -16,6 +19,7 @@ namespace myfinance_web_dotnet.Controllers
             _myFinanceDbContext = myFinanceDbContext;
         }
 
+        [HttpGet]
         public IActionResult Index()
         {
             var listaPlanoContas = _myFinanceDbContext.PlanoConta;
@@ -37,9 +41,59 @@ namespace myfinance_web_dotnet.Controllers
             return View();
         }
 
-        public IActionResult Cadastro()
+        [HttpGet]
+        [Route("Cadastro")]
+        [Route("Cadastro/{id}")]
+        public IActionResult Cadastro(int? id)
         {
-            return View();
+            var planoConta = new PlanoContaModel();
+
+            if (id != null)
+            {
+                var PlanoContaDomain = _myFinanceDbContext.PlanoConta
+                .Where(x => x.Id == id)
+                .FirstOrDefault();
+
+                planoConta.Id = PlanoContaDomain.Id;
+                planoConta.Descricao = PlanoContaDomain.Descricao;
+                planoConta.Tipo = PlanoContaDomain.Tipo;
+            }
+
+            return View(planoConta);
+        }
+
+        [HttpPost]
+        [Route("Cadastro")]
+        [Route("Cadastro/{id}")]
+        public IActionResult Cadastro(PlanoContaModel input)
+        {
+            var planoConta = new PlanoConta(){
+                Id = input.Id,
+                Descricao = input.Descricao,
+                Tipo = input.Tipo
+            };
+
+            if (planoConta.Id == null)
+                _myFinanceDbContext.PlanoConta.Add(planoConta);
+            else{
+                _myFinanceDbContext.PlanoConta.Attach(planoConta);
+                _myFinanceDbContext.Entry(planoConta).State = EntityState.Modified;
+            }
+
+            _myFinanceDbContext.SaveChanges();
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpGet]
+        [Route("Excluir/{id}")]
+        public IActionResult Excluir(int id)
+        {
+            var planoConta = new PlanoConta() { Id = id };
+            _myFinanceDbContext.PlanoConta.Remove(planoConta);
+            _myFinanceDbContext.SaveChanges();
+
+            return RedirectToAction("Index");
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
